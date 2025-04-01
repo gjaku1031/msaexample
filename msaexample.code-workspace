@@ -1,0 +1,145 @@
+{
+    "folders": [
+        {
+            "name": "auth-server",
+            "path": "auth-server"
+        },
+        {
+            "name": "api-gateway",
+            "path": "api-gateway"
+        },
+        {
+            "name": "service-registry",
+            "path": "service-registry"
+        },
+        {
+            "name": "customer-service",
+            "path": "customer-service"
+        },
+        {
+            "name": "product-service",
+            "path": "product-service"
+        },
+        {
+            "name": "order-service",
+            "path": "order-service"
+        }
+    ],
+    "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.import.gradle.enabled": true,
+        "java.import.gradle.wrapper.enabled": true,
+        "java.dependency.packagePresentation": "hierarchical",
+        "java.dependency.syncWithFolderExplorer": true,
+        "editor.formatOnSave": true,
+        "java.project.sourcePaths": [
+            "src/main/java"
+        ],
+        "java.project.resourcePaths": [
+            "src/main/resources"
+        ],
+        "java.project.outputPath": "build/classes",
+        "java.import.exclusions": [
+            "**/node_modules/**",
+            "**/.metadata/**",
+            "**/archetype-resources/**",
+            "**/META-INF/maven/**"
+        ],
+        "java.completion.importOrder": [
+            "java",
+            "javax",
+            "org",
+            "com",
+            ""
+        ],
+        "java.project.explorer.showNonJavaResources": false,
+        "java.format.settings.url": "eclipse-formatter.xml",
+        "java.inlayHints.parameterNames.enabled": "all",
+        "java.import.maven.enabled": false,
+        "java.server.launchMode": "Standard",
+        "java.autobuild.enabled": true,
+        "java.project.referencedLibraries": [],
+        "java.import.gradle.home": null,
+        "java.import.gradle.java.home": null,
+        "java.import.gradle.user.home": null,
+        "java.import.gradle.arguments": [],
+        "java.import.gradle.jvmArguments": [
+            "-Xmx1G"
+        ],
+        "files.exclude": {
+            "**/.git": true,
+            "**/.gradle": true,
+            "**/build": true,
+            "**/.idea": true,
+            "**/.vscode": false,
+            "**/bin": true
+        },
+        "[java]": {
+            "editor.defaultFormatter": "redhat.java",
+            "editor.suggestSelection": "recentlyUsed",
+            "editor.suggest.snippetsPreventQuickSuggestions": false
+        },
+        "[gradle]": {
+            "editor.defaultFormatter": "vscjava.vscode-gradle"
+        },
+        "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m -Xlog:disable"
+    },
+    "extensions": {
+        "recommendations": [
+            "vscjava.vscode-java-pack",
+            "vscjava.vscode-gradle",
+            "vscjava.vscode-spring-initializr",
+            "vscjava.vscode-spring-boot-dashboard",
+            "pivotal.vscode-spring-boot",
+            "redhat.java"
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "type": "java",
+                "name": "Run Auth Server",
+                "request": "launch",
+                "mainClass": "com.example.authserver.AuthServerApplication",
+                "projectName": "auth-server"
+            },
+            {
+                "type": "java",
+                "name": "Run API Gateway",
+                "request": "launch",
+                "mainClass": "com.example.apigateway.ApiGatewayApplication",
+                "projectName": "api-gateway"
+            },
+            {
+                "type": "java",
+                "name": "Run Service Registry",
+                "request": "launch",
+                "mainClass": "com.example.serviceregistry.ServiceRegistryApplication",
+                "projectName": "service-registry"
+            },
+            {
+                "type": "java",
+                "name": "Run Customer Service",
+                "request": "launch",
+                "mainClass": "com.example.customerservice.CustomerServiceApplication",
+                "projectName": "customer-service"
+            },
+            {
+                "type": "java",
+                "name": "Run Product Service",
+                "request": "launch",
+                "mainClass": "com.example.productservice.ProductServiceApplication",
+                "projectName": "product-service"
+            },
+            {
+                "type": "java",
+                "name": "Run Order Service",
+                "request": "launch",
+                "mainClass": "com.example.orderservice.OrderServiceApplication",
+                "projectName": "order-service"
+            }
+        ]
+    }
+}
