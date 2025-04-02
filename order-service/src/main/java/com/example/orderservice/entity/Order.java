@@ -39,7 +39,7 @@ public class Order {
     private List<OrderItem> orderItems = new ArrayList<>();
 
     public enum OrderStatus {
-        CREATED, PROCESSING, COMPLETED, CANCELLED
+        CREATED, PROCESSING, COMPLETED, CANCELLED, DELIVERED
     }
 
     public void addOrderItem(OrderItem orderItem) {

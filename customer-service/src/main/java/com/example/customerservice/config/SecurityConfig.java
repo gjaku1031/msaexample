@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -23,10 +24,18 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
+import com.example.customerservice.security.JwtAuthorizationFilter;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+        private final JwtAuthorizationFilter jwtAuthorizationFilter;
+
+        public SecurityConfig(JwtAuthorizationFilter jwtAuthorizationFilter) {
+                this.jwtAuthorizationFilter = jwtAuthorizationFilter;
+        }
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http, HandlerMappingIntrospector introspector)
@@ -85,7 +94,10 @@ public class SecurityConfig {
                                                 .frameOptions(frame -> frame.sameOrigin())
                                                 .crossOriginEmbedderPolicy(Customizer.withDefaults())
                                                 .crossOriginOpenerPolicy(Customizer.withDefaults())
-                                                .crossOriginResourcePolicy(Customizer.withDefaults()));
+                                                .crossOriginResourcePolicy(Customizer.withDefaults()))
+
+                                // JWT 인증 필터 추가: UsernamePasswordAuthenticationFilter 앞에 배치
+                                .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();
         }
