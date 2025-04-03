@@ -3,9 +3,10 @@ package com.example.authserver.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,10 +32,9 @@ import java.util.stream.Collectors;
  */
 @Entity
 @Table(name = "users")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class User implements UserDetails {
 
     /**
@@ -97,7 +97,6 @@ public class User implements UserDetails {
      */
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
     /**
@@ -108,7 +107,6 @@ public class User implements UserDetails {
      * - 계정 상태 변경은 인증 서버에서만 이루어지고, 다른 마이크로서비스에는 JWT 토큰을 통해 전파됩니다.
      */
     @Column(nullable = false)
-    @Builder.Default
     private boolean enabled = true;
 
     /**
@@ -119,7 +117,6 @@ public class User implements UserDetails {
      * - 잠긴 계정은 인증 서버에서 로그인이 차단되므로 JWT 토큰이 발급되지 않습니다.
      */
     @Column(nullable = false)
-    @Builder.Default
     private boolean accountNonLocked = true;
 
     /**
@@ -130,7 +127,6 @@ public class User implements UserDetails {
      * - 자격 증명이 만료된 경우, 인증 서버는 사용자에게 비밀번호 변경을 요구할 수 있습니다.
      */
     @Column(nullable = false)
-    @Builder.Default
     private boolean credentialsNonExpired = true;
 
     /**
@@ -141,8 +137,75 @@ public class User implements UserDetails {
      * - 만료된 계정은 인증 서버에서 로그인이 차단되므로 JWT 토큰이 발급되지 않습니다.
      */
     @Column(nullable = false)
-    @Builder.Default
     private boolean accountNonExpired = true;
+
+    /**
+     * 빌더 패턴을 이용한 사용자 생성자
+     * 필수 필드를 검증하고 초기화합니다.
+     */
+    @Builder
+    public User(String email, String password, String name, Set<Role> roles,
+            Boolean enabled, Boolean accountNonLocked, Boolean credentialsNonExpired, Boolean accountNonExpired) {
+        // 필수 필드 검증
+        if (email == null || !email.contains("@")) {
+            throw new IllegalArgumentException("유효한 이메일이 필요합니다");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("비밀번호는 필수입니다");
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("이름은 필수입니다");
+        }
+
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.roles = roles != null ? roles : new HashSet<>();
+        this.enabled = enabled != null ? enabled : true;
+        this.accountNonLocked = accountNonLocked != null ? accountNonLocked : true;
+        this.credentialsNonExpired = credentialsNonExpired != null ? credentialsNonExpired : true;
+        this.accountNonExpired = accountNonExpired != null ? accountNonExpired : true;
+    }
+
+    /**
+     * 역할 추가 메서드
+     * 
+     * @param role 추가할 역할
+     */
+    public void addRole(Role role) {
+        if (role != null) {
+            roles.add(role);
+        }
+    }
+
+    /**
+     * 역할 제거 메서드
+     * 
+     * @param role 제거할 역할
+     */
+    public void removeRole(Role role) {
+        if (role != null) {
+            roles.remove(role);
+        }
+    }
+
+    /**
+     * 계정 상태 변경 메서드
+     * 
+     * @param enabled 활성화 여부
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * 계정 잠금 상태 변경 메서드
+     * 
+     * @param accountNonLocked 계정 잠금 해제 여부
+     */
+    public void setAccountNonLocked(boolean accountNonLocked) {
+        this.accountNonLocked = accountNonLocked;
+    }
 
     /**
      * Spring Security의 UserDetails 인터페이스 구현

@@ -1,10 +1,13 @@
 package com.example.orderservice.repository;
 
-import com.example.orderservice.entity.Order;
-import com.example.orderservice.entity.Order.OrderStatus;
+import com.example.orderservice.entity.OrderEntity;
+import com.example.orderservice.entity.OrderEntity.OrderStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderRepositoryCustom {
-    List<Order> findOrdersByStatusAndDateRange(OrderStatus status, LocalDateTime startDate, LocalDateTime endDate);
+    List<OrderEntity> findOrdersByCustomerIdAndStatus(Long customerId, OrderStatus status);
+
+    List<OrderEntity> findOrdersByStatusAndDateRange(OrderStatus status, LocalDateTime startDate,
+            LocalDateTime endDate);
 }

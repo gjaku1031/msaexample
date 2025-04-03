@@ -1,11 +1,10 @@
 package com.example.orderservice.repository;
 
-import com.example.orderservice.entity.Order;
-import com.example.orderservice.entity.Order.OrderStatus;
-import com.example.orderservice.entity.QOrder;
+import com.example.orderservice.entity.OrderEntity;
+import com.example.orderservice.entity.OrderEntity.OrderStatus;
+import static com.example.orderservice.entity.QOrderEntity.orderEntity;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Repository;
@@ -13,21 +12,32 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class OrderRepositoryImpl implements OrderRepositoryCustom {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+        private final JPAQueryFactory queryFactory;
 
-    @Override
-    public List<Order> findOrdersByStatusAndDateRange(OrderStatus status, LocalDateTime startDate,
-            LocalDateTime endDate) {
-        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        QOrder order = QOrder.order;
+        public OrderRepositoryImpl(EntityManager entityManager) {
+                this.queryFactory = new JPAQueryFactory(entityManager);
+        }
 
-        return queryFactory
-                .selectFrom(order)
-                .where(
-                        order.status.eq(status)
-                                .and(order.orderDate.between(startDate, endDate)))
-                .orderBy(order.orderDate.desc())
-                .fetch();
-    }
+        @Override
+        public List<OrderEntity> findOrdersByCustomerIdAndStatus(Long customerId, OrderStatus status) {
+                return queryFactory
+                                .selectFrom(orderEntity)
+                                .where(
+                                                orderEntity.customerId.eq(customerId)
+                                                                .and(orderEntity.status.eq(status)))
+                                .orderBy(orderEntity.orderDate.desc())
+                                .fetch();
+        }
+
+        @Override
+        public List<OrderEntity> findOrdersByStatusAndDateRange(OrderStatus status, LocalDateTime startDate,
+                        LocalDateTime endDate) {
+                return queryFactory
+                                .selectFrom(orderEntity)
+                                .where(
+                                                orderEntity.status.eq(status)
+                                                                .and(orderEntity.orderDate.between(startDate, endDate)))
+                                .orderBy(orderEntity.orderDate.desc())
+                                .fetch();
+        }
 }

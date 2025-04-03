@@ -7,13 +7,13 @@ import com.example.orderservice.dto.CustomerDto;
 import com.example.orderservice.dto.OrderDto;
 import com.example.orderservice.dto.OrderItemDto;
 import com.example.orderservice.dto.ProductDto;
-import com.example.orderservice.entity.Order;
-import com.example.orderservice.entity.Order.OrderStatus;
-import com.example.orderservice.entity.OrderItem;
+import com.example.orderservice.entity.OrderEntity;
+import com.example.orderservice.entity.OrderEntity.OrderStatus;
+import com.example.orderservice.entity.OrderItemEntity;
 import com.example.orderservice.repository.OrderRepository;
-import com.example.orderservice.repository.OrderRepositoryImpl;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final OrderRepositoryImpl orderRepositoryImpl;
     private final ProductClient productClient;
     private final CustomerClient customerClient;
 
@@ -34,7 +33,7 @@ public class OrderService {
         CustomerDto customer = customerClient.getCustomer(request.getCustomerId());
 
         // 주문 생성
-        Order order = Order.builder()
+        OrderEntity order = OrderEntity.builder()
                 .customerId(customer.getId())
                 .orderNumber(generateOrderNumber())
                 .status(OrderStatus.CREATED)
@@ -50,27 +49,26 @@ public class OrderService {
             // 재고 업데이트
             productClient.updateStock(product.getId(), itemRequest.getQuantity());
 
-            OrderItem orderItem = OrderItem.builder()
+            OrderItemEntity orderItem = OrderItemEntity.builder()
                     .productId(product.getId())
                     .productName(product.getName())
                     .quantity(itemRequest.getQuantity())
                     .unitPrice(product.getPrice())
-                    .totalPrice(product.getPrice() * itemRequest.getQuantity())
                     .build();
 
             order.addOrderItem(orderItem);
-            totalAmount += orderItem.getTotalPrice();
+            totalAmount += orderItem.getUnitPrice() * orderItem.getQuantity();
         }
 
-        order.setTotalAmount(totalAmount);
-        Order savedOrder = orderRepository.save(order);
+        // totalAmount는 addOrderItem 메서드에서 자동 계산됨
+        OrderEntity savedOrder = orderRepository.save(order);
 
         return mapToOrderDto(savedOrder, customer.getName());
     }
 
     @Transactional(readOnly = true)
     public OrderDto getOrderById(Long id) {
-        Order order = orderRepository.findById(id)
+        OrderEntity order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
 
         CustomerDto customer = customerClient.getCustomer(order.getCustomerId());
@@ -79,11 +77,12 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public OrderDto getOrderByOrderNumber(String orderNumber) {
-        Order order = orderRepository.findByOrderNumber(orderNumber);
-        if (order == null) {
+        List<OrderEntity> orders = orderRepository.findByOrderNumber(orderNumber);
+        if (orders == null || orders.isEmpty()) {
             throw new RuntimeException("Order not found with orderNumber: " + orderNumber);
         }
 
+        OrderEntity order = orders.get(0);
         CustomerDto customer = customerClient.getCustomer(order.getCustomerId());
         return mapToOrderDto(order, customer.getName());
     }
@@ -91,17 +90,41 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderDto> getOrdersByCustomerId(Long customerId) {
         CustomerDto customer = customerClient.getCustomer(customerId);
-        List<Order> orders = orderRepository.findByCustomerId(customerId);
-
+        List<OrderEntity> orders = orderRepository.findByCustomerId(customerId);
         return orders.stream()
                 .map(order -> mapToOrderDto(order, customer.getName()))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
+    public List<OrderDto> getOrdersByStatus(OrderStatus status) {
+        List<OrderEntity> orders = orderRepository.findAll()
+                .stream()
+                .filter(order -> order.getStatus() == status)
+                .collect(Collectors.toList());
+
+        Map<Long, String> customerNames = orders.stream()
+                .map(OrderEntity::getCustomerId)
+                .distinct()
+                .collect(Collectors.toMap(
+                        (Long id) -> id,
+                        (Long id) -> {
+                            try {
+                                return customerClient.getCustomer(id).getName();
+                            } catch (Exception e) {
+                                return "Unknown Customer";
+                            }
+                        }));
+
+        return orders.stream()
+                .map(order -> mapToOrderDto(order, customerNames.get(order.getCustomerId())))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<OrderDto> getOrdersByStatusAndDateRange(OrderStatus status, LocalDateTime startDate,
             LocalDateTime endDate) {
-        List<Order> orders = orderRepositoryImpl.findOrdersByStatusAndDateRange(status, startDate, endDate);
+        List<OrderEntity> orders = orderRepository.findOrdersByStatusAndDateRange(status, startDate, endDate);
 
         return orders.stream()
                 .map(order -> {
@@ -119,7 +142,7 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public List<OrderDto> getAllOrders() {
-        List<Order> orders = orderRepository.findAll();
+        List<OrderEntity> orders = orderRepository.findAll();
 
         return orders.stream()
                 .map(order -> {
@@ -138,7 +161,7 @@ public class OrderService {
      */
     @Transactional
     public OrderDto cancelOrder(Long id) {
-        Order order = orderRepository.findById(id)
+        OrderEntity order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
 
         // 이미 취소된 주문인지 확인
@@ -152,11 +175,11 @@ public class OrderService {
         }
 
         // 주문 상태를 취소로 변경
-        order.setStatus(OrderStatus.CANCELLED);
-        Order updatedOrder = orderRepository.save(order);
+        order.updateStatus(OrderStatus.CANCELLED);
+        OrderEntity updatedOrder = orderRepository.save(order);
 
         // 재고 복원 로직 (옵션)
-        for (OrderItem item : order.getOrderItems()) {
+        for (OrderItemEntity item : order.getOrderItems()) {
             productClient.updateStock(item.getProductId(), -item.getQuantity()); // 음수로 전달하여 재고 증가
         }
 
@@ -166,41 +189,45 @@ public class OrderService {
 
     @Transactional
     public OrderDto updateOrderStatus(Long id, OrderStatus status) {
-        Order order = orderRepository.findById(id)
+        OrderEntity order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
 
-        order.setStatus(status);
-        Order updatedOrder = orderRepository.save(order);
+        order.updateStatus(status);
+        OrderEntity updatedOrder = orderRepository.save(order);
 
         CustomerDto customer = customerClient.getCustomer(updatedOrder.getCustomerId());
         return mapToOrderDto(updatedOrder, customer.getName());
     }
 
     private String generateOrderNumber() {
-        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "ORD-" + System.currentTimeMillis();
     }
 
-    private OrderDto mapToOrderDto(Order order, String customerName) {
+    private OrderDto mapToOrderDto(OrderEntity order, String customerName) {
         List<OrderItemDto> orderItemDtos = order.getOrderItems().stream()
-                .map(item -> OrderItemDto.builder()
-                        .id(item.getId())
-                        .productId(item.getProductId())
-                        .productName(item.getProductName())
-                        .quantity(item.getQuantity())
-                        .unitPrice(item.getUnitPrice())
-                        .totalPrice(item.getTotalPrice())
-                        .build())
+                .map(this::mapToOrderItemDto)
                 .collect(Collectors.toList());
 
         return OrderDto.builder()
                 .id(order.getId())
+                .orderNumber(order.getOrderNumber())
                 .customerId(order.getCustomerId())
                 .customerName(customerName)
-                .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
                 .orderDate(order.getOrderDate())
                 .totalAmount(order.getTotalAmount())
                 .items(orderItemDtos)
+                .build();
+    }
+
+    private OrderItemDto mapToOrderItemDto(OrderItemEntity orderItem) {
+        return OrderItemDto.builder()
+                .id(orderItem.getId())
+                .productId(orderItem.getProductId())
+                .productName(orderItem.getProductName())
+                .quantity(orderItem.getQuantity())
+                .unitPrice(orderItem.getUnitPrice())
+                .totalPrice(orderItem.getTotalPrice())
                 .build();
     }
 }

@@ -1,19 +1,22 @@
 package com.example.productservice.controller;
 
-import com.example.productservice.entity.Product;
+import com.example.productservice.entity.ProductEntity;
 import com.example.productservice.security.RequirePermission;
 import com.example.productservice.service.ProductService;
+import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
  * 상품 관련 API 엔드포인트 컨트롤러
  */
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping(path = "/api/products", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -24,8 +27,8 @@ public class ProductController {
      * 모든 사용자가 접근 가능
      */
     @GetMapping
-    public ResponseEntity<List<Product>> getAllProducts() {
-        List<Product> products = productService.getAllProducts();
+    public ResponseEntity<List<ProductEntity>> getAllProducts() {
+        List<ProductEntity> products = productService.getAllProducts();
         return ResponseEntity.ok(products);
     }
 
@@ -34,28 +37,28 @@ public class ProductController {
      * 모든 사용자가 접근 가능
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        Product product = productService.getProductById(id);
+    public ResponseEntity<ProductEntity> getProductById(@PathVariable Long id) {
+        ProductEntity product = productService.getProductById(id);
         return ResponseEntity.ok(product);
     }
 
     @GetMapping("/category/{category}")
-    public ResponseEntity<List<Product>> getProductsByCategory(@PathVariable String category) {
+    public ResponseEntity<List<ProductEntity>> getProductsByCategory(@PathVariable String category) {
         return ResponseEntity.ok(productService.getProductsByCategory(category));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<Product>> searchProductsByName(@RequestParam String name) {
+    @GetMapping(path = "/search", params = "name")
+    public ResponseEntity<List<ProductEntity>> searchProductsByName(@RequestParam String name) {
         return ResponseEntity.ok(productService.searchProductsByName(name));
     }
 
-    @GetMapping("/price")
-    public ResponseEntity<List<Product>> getProductsByMaxPrice(@RequestParam Double maxPrice) {
+    @GetMapping(path = "/price", params = "maxPrice")
+    public ResponseEntity<List<ProductEntity>> getProductsByMaxPrice(@RequestParam Double maxPrice) {
         return ResponseEntity.ok(productService.getProductsByMaxPrice(maxPrice));
     }
 
-    @GetMapping("/filter")
-    public ResponseEntity<List<Product>> getProductsByCategoryAndMaxPrice(
+    @GetMapping(path = "/filter", params = { "category", "maxPrice" })
+    public ResponseEntity<List<ProductEntity>> getProductsByCategoryAndMaxPrice(
             @RequestParam String category,
             @RequestParam Double maxPrice) {
         return ResponseEntity.ok(productService.getProductsByCategoryAndMaxPrice(category, maxPrice));
@@ -65,21 +68,29 @@ public class ProductController {
      * 새 상품 생성
      * ADMIN 또는 PRODUCT:WRITE 권한이 필요
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @RequirePermission({ "ROLE_ADMIN", "PRODUCT:WRITE" })
-    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-        Product createdProduct = productService.createProduct(product);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+    public ResponseEntity<ProductEntity> createProduct(@RequestBody ProductEntity product) {
+        ProductEntity createdProduct = productService.createProduct(product);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdProduct.getId())
+                .toUri();
+
+        return ResponseEntity
+                .created(location)
+                .body(createdProduct);
     }
 
     /**
      * 상품 정보 업데이트
      * ADMIN 또는 PRODUCT:WRITE 권한이 필요
      */
-    @PutMapping("/{id}")
+    @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @RequirePermission({ "ROLE_ADMIN", "PRODUCT:WRITE" })
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
-        Product updatedProduct = productService.updateProduct(id, product);
+    public ResponseEntity<ProductEntity> updateProduct(@PathVariable Long id, @RequestBody ProductEntity product) {
+        ProductEntity updatedProduct = productService.updateProduct(id, product);
         return ResponseEntity.ok(updatedProduct);
     }
 
@@ -98,10 +109,10 @@ public class ProductController {
      * 상품 재고 업데이트
      * ADMIN 또는 PRODUCT:WRITE 권한이 필요
      */
-    @PatchMapping("/{id}/stock")
+    @PatchMapping(path = "/{id}/stock", params = "quantity")
     @RequirePermission({ "ROLE_ADMIN", "PRODUCT:WRITE" })
-    public ResponseEntity<Product> updateStock(@PathVariable Long id, @RequestParam int quantity) {
-        Product product = productService.updateStock(id, quantity);
+    public ResponseEntity<ProductEntity> updateStock(@PathVariable Long id, @RequestParam int quantity) {
+        ProductEntity product = productService.updateStock(id, quantity);
         return ResponseEntity.ok(product);
     }
 }

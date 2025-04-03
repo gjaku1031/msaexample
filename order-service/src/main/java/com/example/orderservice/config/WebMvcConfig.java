@@ -1,6 +1,8 @@
 package com.example.orderservice.config;
 
 import com.example.orderservice.security.AuthorizationInterceptor;
+
+import org.springframework.lang.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -25,7 +27,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
      * 컨트롤러 메서드의 권한을 체크합니다.
      */
     @Override
-    public void addInterceptors(InterceptorRegistry registry) {
+    public void addInterceptors(@NonNull InterceptorRegistry registry) {
         registry.addInterceptor(authorizationInterceptor)
                 .addPathPatterns("/api/**"); // 모든 API 경로에 적용
     }

@@ -15,6 +15,7 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    querydsl.extendsFrom compileClasspath
 }
 
 repositories {
@@ -36,7 +37,15 @@ dependencies {
     
     // QueryDSL
     implementation "com.querydsl:querydsl-jpa:${querydslVersion}:jakarta"
+    
+    // 명시적 의존성 추가
+    implementation 'jakarta.persistence:jakarta.persistence-api'
+    implementation 'jakarta.annotation:jakarta.annotation-api'
+    
+    // QueryDSL 어노테이션 프로세서
     annotationProcessor "com.querydsl:querydsl-apt:${querydslVersion}:jakarta"
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
     
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.h2database:h2'
@@ -61,18 +70,26 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-def querydslDir = "src/main/generated"
+// QueryDSL 설정 개선
+def querydslDir = "$buildDir/generated/querydsl"
 
+// 소스 세트 설정
 sourceSets {
-    main.java.srcDirs += [ querydslDir ]
-}
-
-tasks.withType(JavaCompile) {
-    options.getGeneratedSourceOutputDirectory().set(file(querydslDir))
-}
-
-tasks.named('clean') {
-    doLast {
-        file(querydslDir).deleteDir()
+    main {
+        java {
+            srcDir querydslDir
+        }
     }
+}
+
+// 어노테이션 프로세서 설정 개선
+tasks.withType(JavaCompile) {
+    options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
+}
+
+// 클린 작업 시 생성된 파일 삭제 확인
+clean {
+    delete file(querydslDir)
+    delete file("${buildDir}/generated-sources")
+    delete file("${buildDir}/bin")
 } 

@@ -1,6 +1,6 @@
 package com.example.orderservice.dto;
 
-import com.example.orderservice.entity.Order.OrderStatus;
+import com.example.orderservice.entity.OrderEntity.OrderStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;

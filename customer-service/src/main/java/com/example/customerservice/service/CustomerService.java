@@ -1,8 +1,7 @@
 package com.example.customerservice.service;
 
-import com.example.customerservice.entity.Customer;
+import com.example.customerservice.entity.CustomerEntity;
 import com.example.customerservice.repository.CustomerRepository;
-import com.example.customerservice.repository.CustomerRepositoryImpl;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,47 +12,61 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final CustomerRepositoryImpl customerRepositoryImpl;
 
     @Transactional(readOnly = true)
-    public List<Customer> getAllCustomers() {
+    public List<CustomerEntity> getAllCustomers() {
         return customerRepository.findAll();
     }
 
     @Transactional(readOnly = true)
-    public Customer getCustomerById(Long id) {
+    public CustomerEntity getCustomerById(Long id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
-    public Customer getCustomerByEmail(String email) {
-        return customerRepository.findByEmail(email);
+    public CustomerEntity getCustomerByEmail(String email) {
+        return customerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Customer not found with email: " + email));
     }
 
     @Transactional(readOnly = true)
-    public List<Customer> getCustomersByName(String name) {
-        return customerRepositoryImpl.findByNameContainingWithQuerydsl(name);
+    public List<CustomerEntity> getCustomersByName(String name) {
+        return customerRepository.searchCustomers(name);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerEntity> searchCustomers(String nameOrEmail) {
+        return customerRepository.searchCustomers(nameOrEmail);
     }
 
     @Transactional
-    public Customer createCustomer(Customer customer) {
+    public CustomerEntity createCustomer(CustomerEntity customer) {
         return customerRepository.save(customer);
     }
 
     @Transactional
-    public Customer updateCustomer(Long id, Customer customerDetails) {
-        Customer customer = getCustomerById(id);
-        customer.setName(customerDetails.getName());
-        customer.setEmail(customerDetails.getEmail());
-        customer.setAddress(customerDetails.getAddress());
-        customer.setPhoneNumber(customerDetails.getPhoneNumber());
-        return customerRepository.save(customer);
+    public CustomerEntity updateCustomer(Long id, CustomerEntity customer) {
+        // 기존 고객 조회
+        CustomerEntity existingCustomer = getCustomerById(id);
+
+        // 새로운 불변 객체 생성 (Builder 패턴 사용)
+        CustomerEntity updatedCustomer = CustomerEntity.builder()
+                .name(customer.getName() != null ? customer.getName() : existingCustomer.getName())
+                .email(customer.getEmail() != null ? customer.getEmail() : existingCustomer.getEmail())
+                .address(customer.getAddress() != null ? customer.getAddress() : existingCustomer.getAddress())
+                .phoneNumber(customer.getPhoneNumber() != null ? customer.getPhoneNumber()
+                        : existingCustomer.getPhoneNumber())
+                .build();
+
+        // ID 값 설정을 위한 리플렉션 사용 대신 새 객체로 저장
+        customerRepository.delete(existingCustomer);
+        return customerRepository.save(updatedCustomer);
     }
 
     @Transactional
     public void deleteCustomer(Long id) {
-        Customer customer = getCustomerById(id);
+        CustomerEntity customer = getCustomerById(id);
         customerRepository.delete(customer);
     }
 }

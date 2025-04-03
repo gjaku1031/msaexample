@@ -19,10 +19,8 @@ import lombok.*;
 @Entity
 @Table(name = "roles")
 @Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Role {
 
     /**
@@ -60,4 +58,56 @@ public class Role {
      */
     @Column
     private String description;
+
+    /**
+     * 빌더 패턴을 이용한 역할 생성자
+     * 필수 필드를 검증하고 초기화합니다.
+     */
+    @Builder
+    public Role(String name, String description) {
+        // 필수 필드 검증
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("역할 이름은 필수입니다");
+        }
+
+        // Spring Security 호환성을 위한 접두사 확인 및 추가
+        if (!name.startsWith("ROLE_")) {
+            name = "ROLE_" + name;
+        }
+
+        this.name = name;
+        this.description = description;
+    }
+
+    /**
+     * 역할 설명 업데이트 메서드
+     * 
+     * @param description 새로운 설명
+     */
+    public void updateDescription(String description) {
+        this.description = description;
+    }
+
+    /**
+     * 동등성 비교를 위한 equals 메서드 오버라이드
+     * 역할은 이름으로 식별됩니다.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        Role role = (Role) o;
+        return name != null ? name.equals(role.name) : role.name == null;
+    }
+
+    /**
+     * 해시코드 계산을 위한 hashCode 메서드 오버라이드
+     */
+    @Override
+    public int hashCode() {
+        return name != null ? name.hashCode() : 0;
+    }
 }
